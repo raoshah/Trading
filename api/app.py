@@ -148,7 +148,7 @@ def profile():
             if order_placed:
                 return redirect('/order')
             else:
-                order_placed = "Do not place the order"
+                order_placed = "Do not place the order yet"
             return render_template('profile.html', name=order_placed, holdings=holdings)
     return "Please login first"
 

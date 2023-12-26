@@ -34,7 +34,7 @@ def five_min_candle(header, six_days_ago):
         res = conn.getresponse()
         data = res.read().decode("utf-8")
         candle_data_list.append(data)
-        time.sleep(0.2)
+        time.sleep(0.5)
         conn.close()
 
     specific_data_list = []

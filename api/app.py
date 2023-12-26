@@ -40,7 +40,7 @@ def five_min_candle(header, six_days_ago):
 
     for json_data in candle_data_list:
         data = json.loads(json_data)
-        specific_data = data['data'][1]
+        specific_data = data['data'][0]
         specific_data_list.append(specific_data)
 
     return specific_data_list

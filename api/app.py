@@ -142,7 +142,6 @@ def profile():
                 return render_template('profile.html', name=order_placed, holdings=holdings)
         else:
             six_days_ago = datetime.now() - timedelta(days=6, hours=11)
-            six_days_ago = datetime.strptime(six_days_ago, "%Y-%m-%d %H:%M:%S")
             holdings = five_min_candle(user['headers'], six_days_ago)
             order_placed = algo_five(holdings)
             if order_placed:

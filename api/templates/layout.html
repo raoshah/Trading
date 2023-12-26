@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading App</title>
+
+
+    <style>
+        header {
+            background-color: lightpink;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        nav {
+            width: 100%;
+            max-width: 960px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            margin-right: auto;
+        }
+
+        .logo img {
+            width: 40px;
+            height: 40px;
+        }
+
+        ul {
+            display: flex;
+            margin: 0;
+            padding: 0;
+        }
+
+        li {
+            list-style: none;
+            margin-right: 30px;
+        }
+
+        li:last-child {
+            margin-right: 0;
+        }
+
+        a {
+            color: blueviolet;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 500;
+            padding: 10px;
+            transition: all 0.3s ease-in-out;
+        }
+
+        a:hover {
+            background-color: orangered;
+            color: black;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 28px;
+            font-weight: 600;
+            line-height: 1.2;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 30px;
+        }
+
+        form {
+            max-width: 500px;
+            margin: auto;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .error {
+            color: red;
+            margin-bottom: 10px;
+        }
+
+
+
+        .btn {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 4px 20px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 16px;
+            border-radius: 16px;
+        }
+
+        .btn:hover {
+            background-color: #45a049;
+        }
+
+        .count {
+            font-size: 24px;
+            margin-top: 10px;
+            display: inline-block;
+            background-color: #7f00ff;
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 30px;
+
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <div class="logo">
+                <a href="/">Trading App</a>
+            </div>
+            <ul>
+                <li>Devloping...</li>
+            </ul>
+        </nav>
+    </header>
+    {% block body %} {% endblock %}
+</body>
+
+</html>

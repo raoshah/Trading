@@ -1,0 +1,22 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+
+<form action="/login" method="post">
+    <br>
+    <input type="text" name="client_id" placeholder="Client_id">
+    <br>
+    <input type="text" name="tpin" placeholder="T PIN">
+    <br>
+    <input type="text" name="otp" placeholder="T OTP CODE">
+    if you dont have code generat here <a href="https://smartapi.angelbroking.com/enable-totp">Generate</a>
+    <br>
+    <br>
+    <input type="text" name="apikey" placeholder="API key">
+    <p>if you dont have api key generate here <a href="https://smartapi.angelbroking.com/signup">Generate</a></p>
+    <br>
+    <br>
+    <input type="submit" value="Login" id="greet">
+</form>
+
+{% endblock %}

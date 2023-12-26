@@ -1,0 +1,17 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<h1>Profile</h1>
+<h1>{{ name }}</h1>
+<form action="/profile" method="post">
+    <p>Set date time format: 2023-12-19 10:14:42</p>
+    <input type="text" name="dateTime" id="dateTime" placeholder="2023-12-19 10:14:42">
+    <button type="submit">Check</button>
+</form>
+<h2>{{ holdings }}</h2>
+
+
+<button><a href="/order">Buy SBIN</a></button>
+
+<button><a href="/logout">Logout</a></button>
+{% endblock %}

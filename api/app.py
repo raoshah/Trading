@@ -15,9 +15,8 @@ conn = http.client.HTTPSConnection("apiconnect.angelbroking.com")
 def five_min_candle(header, six_days_ago):
 
     candle_data_list = []
-    print(f" order NOt placed yet {six_days_ago}")
+    print(f" order not placed yet {six_days_ago}")
     for i in range(5):
-
         from_date = six_days_ago - timedelta(minutes=5 * (i + 1))
         to_date = six_days_ago - timedelta(minutes=5 * i)
         from_date_str = from_date.strftime("%Y-%m-%d %H:%M")

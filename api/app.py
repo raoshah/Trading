@@ -1,10 +1,12 @@
 from flask import Flask, render_template, request, session, redirect
 from datetime import datetime, timedelta
+from threading import Thread
 import pyotp
 import json
 import http.client
 import mimetypes
 import time
+
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
@@ -13,7 +15,7 @@ conn = http.client.HTTPSConnection("apiconnect.angelbroking.com")
 def five_min_candle(header, six_days_ago):
 
     candle_data_list = []
-    print(six_days_ago)
+    print(f" order NOt placed yet {six_days_ago}")
     for i in range(5):
 
         from_date = six_days_ago - timedelta(minutes=5 * (i + 1))
@@ -34,11 +36,11 @@ def five_min_candle(header, six_days_ago):
         res = conn.getresponse()
         data = res.read().decode("utf-8")
         candle_data_list.append(data)
-        time.sleep(0.5)
         conn.close()
+        time.sleep(0.2)
 
     specific_data_list = []
-
+    print(specific_data_list)
     for json_data in candle_data_list:
         datas = json.loads(json_data)
         specific_data = datas['data'][0]
@@ -126,6 +128,7 @@ def login():
         return redirect('/profile')
     return render_template('index.html')
 
+ghead = {}
 @app.route('/profile', methods=['POST', 'GET'])
 def profile():
     if 'user' in session:
@@ -142,7 +145,7 @@ def profile():
                 order_placed = "Do not place the order"
                 return render_template('profile.html', name=order_placed, holdings=holdings)
         else:
-            six_days_ago = datetime.now() - timedelta(days=6, hours=22)
+            six_days_ago = datetime.now() - timedelta(days=7, hours=8)
             holdings = five_min_candle(user['headers'], six_days_ago)
             order_placed = algo_five(holdings)
             if order_placed:
@@ -151,6 +154,45 @@ def profile():
                 order_placed = "Do not place the order yet"
             return render_template('profile.html', name=order_placed, holdings=holdings)
     return "Please login first"
+
+loop_flag = False
+@app.route('/check')
+def check():
+    global loop_flag
+    global ghead
+    if 'user' in session:
+        user = session['user']
+        ghead = user['headers']
+        loop_flag = True
+        count_thread = Thread(target=count)
+        count_thread.start()
+    return render_template('check.html')
+
+g_nifty = 'Loading...'
+g_order_placed = ''
+def count():
+    global g_nifty
+    global loop_flag
+    global g_order_placed
+    global ghead
+    while True:
+        if loop_flag:
+            six_days_ago = datetime.now() - timedelta(days=7, hours=8)
+            g_nifty = five_min_candle(ghead, six_days_ago)
+            g_order_placed = algo_five(g_nifty)
+        else:
+            break 
+
+
+
+@app.route('/status')
+def get_status():
+    global g_order_placed
+    global g_nifty
+    if g_order_placed:
+        return 'true'
+    else:
+        return str(g_nifty)
 
 @app.route('/order')
 def order():
@@ -180,6 +222,10 @@ def order():
     return 'seccuss'
   return "Please login first"
 
+@app.route('/reset')
+def reset():
+    if 'user' in session:
+        pass
 
 @app.route('/logout')
 def logout():

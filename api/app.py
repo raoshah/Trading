@@ -172,7 +172,7 @@ def get_status():
         if result:
             return 'true'
         else:
-            return str(candle_data)
+            return str(candle_data[-1][-2])
     else:
         return str("Login Your Account")
 

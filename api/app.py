@@ -12,57 +12,47 @@ app = Flask(__name__)
 app.secret_key = "your_secret_key"
 conn = http.client.HTTPSConnection("apiconnect.angelbroking.com")
 
-def five_min_candle(header, six_days_ago):
 
-    candle_data_list = []
-    print(f" order not placed yet {six_days_ago}")
-    for i in range(5):
-        from_date = six_days_ago - timedelta(minutes=5 * (i + 1))
-        to_date = six_days_ago - timedelta(minutes=5 * i)
-        from_date_str = from_date.strftime("%Y-%m-%d %H:%M")
-        to_date_str = to_date.strftime("%Y-%m-%d %H:%M")
+def five_min(header, date_str, time_str):
 
-        payload = {
-            "exchange": "NSE",
-            "symboltoken": "99926000",
-            "interval": "FIVE_MINUTE",
-            "fromdate": from_date_str,
-            "todate": to_date_str
-        }
-        payload_str = json.dumps(payload)
+    date_str = date_str.strftime("%Y-%m-%d")
+    time_str = time_str.strftime("%H:%M")
 
-        conn.request("POST", "/rest/secure/angelbroking/historical/v1/getCandleData", payload_str, header)
-        res = conn.getresponse()
-        data = res.read().decode("utf-8")
-        candle_data_list.append(data)
-        conn.close()
-        time.sleep(0.2)
+    payload = {
+        "exchange": "NSE",
+        "symboltoken": "99926000",
+        "interval": "FIVE_MINUTE",
+        "fromdate":  date_str+' 09:15',
+        "todate": date_str+' '+time_str
+    }
+    payload_str = json.dumps(payload)
 
-    specific_data_list = []
-    print(specific_data_list)
-    for json_data in candle_data_list:
-        datas = json.loads(json_data)
-        specific_data = datas['data'][0]
-        specific_data_list.append(specific_data)
+    conn.request("POST", "/rest/secure/angelbroking/historical/v1/getCandleData", payload_str, header)
+    res = conn.getresponse()
+    data = res.read().decode("utf-8")
+    conn.close()
+    data_dict = json.loads(data)
+    candle_data = data_dict['data']
+    return candle_data
 
-    return specific_data_list
+
 
 def algo_five(candle_data):
     if len(candle_data) < 5:
         return False
 
-    last_candle = candle_data[0]
-    second_last_candle = candle_data[1]
-    third_last_candle = candle_data[2]
-    fourth_last_candle = candle_data[3]
-    fifth_last_candle = candle_data[4]
+    last_candle = candle_data[-1]
+    second_last_candle = candle_data[-2]
+    third_last_candle = candle_data[-3]
+    fourth_last_candle = candle_data[-4]
+    fifth_last_candle = candle_data[-5]
     mini = min(third_last_candle[4], second_last_candle[4], fourth_last_candle[4])
-
+    print(f" 1st {last_candle[1]} 2nd {second_last_candle[2]} 3rd {third_last_candle[3]}")
     if (last_candle[4] < last_candle[1] and
             second_last_candle[4] < second_last_candle[1] and
             third_last_candle[4] < third_last_candle[1] and
             fourth_last_candle[4] < fourth_last_candle[1] and
-            second_last_candle[2] < third_last_candle[1] and
+            second_last_candle[2] > third_last_candle[1] and
             last_candle[4] < mini):
         return True
     else:
@@ -127,16 +117,28 @@ def login():
         return redirect('/profile')
     return render_template('index.html')
 
-ghead = {}
+
+def order_check(headers):
+    date_str = datetime.now() 
+    time_str = datetime.strptime("15:30", "%H:%M")
+    candle_data = five_min(headers, date_str, time_str)
+    order_placed = algo_five(candle_data)
+    if order_placed:
+        return True, candle_data
+    else:
+        return False, candle_data
+
+
 @app.route('/profile', methods=['POST', 'GET'])
 def profile():
     if 'user' in session:
         user = session['user']
-        userProfile = user
         if request.method == 'POST':
-            six_days_ago = request.form['dateTime']
-            six_days_ago = datetime.strptime(six_days_ago, "%Y-%m-%d %H:%M:%S")
-            holdings = five_min_candle(user['headers'], six_days_ago)
+            date_str = request.form['date_str']
+            time_str = request.form['time_str']
+            date_str = datetime.strptime(date_str, "%Y-%m-%d")
+            time_str = datetime.strptime(time_str, "%H:%M")
+            holdings = five_min(user['headers'], date_str, time_str)
             order_placed = algo_five(holdings)
             if order_placed:
                 return redirect('/order')
@@ -144,54 +146,35 @@ def profile():
                 order_placed = "Do not place the order"
                 return render_template('profile.html', name=order_placed, holdings=holdings)
         else:
-            six_days_ago = datetime.now() - timedelta(days=7, hours=8)
-            holdings = five_min_candle(user['headers'], six_days_ago)
-            order_placed = algo_five(holdings)
-            if order_placed:
+            result, candle_data = order_check(user['headers'])
+            if result:
                 return redirect('/order')
             else:
-                order_placed = "Do not place the order yet"
-            return render_template('profile.html', name=order_placed, holdings=holdings)
+                order_st = "Do not place the order yet"
+            return render_template('profile.html', name=order_st, holdings=candle_data)
     return "Please login first"
 
-loop_flag = False
+
 @app.route('/check')
 def check():
-    global loop_flag
-    global ghead
     if 'user' in session:
         user = session['user']
-        ghead = user['headers']
-        loop_flag = True
-        count_thread = Thread(target=count)
-        count_thread.start()
-    return render_template('check.html')
-
-g_nifty = 'Loading...'
-g_order_placed = ''
-def count():
-    global g_nifty
-    global loop_flag
-    global g_order_placed
-    global ghead
-    while True:
-        if loop_flag:
-            six_days_ago = datetime.now() - timedelta(days=7, hours=8)
-            g_nifty = five_min_candle(ghead, six_days_ago)
-            g_order_placed = algo_five(g_nifty)
-        else:
-            break 
-
+        return render_template('check.html')
+    else:
+        return render_template('index.html')
 
 
 @app.route('/status')
 def get_status():
-    global g_order_placed
-    global g_nifty
-    if g_order_placed:
-        return 'true'
+    if 'user' in session:
+        user = session['user']
+        result, candle_data = order_check(user['headers'])
+        if result:
+            return 'true'
+        else:
+            return str(candle_data)
     else:
-        return str(g_nifty)
+        return str("Login Your Account")
 
 @app.route('/order')
 def order():

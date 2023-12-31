@@ -1,17 +1,19 @@
 from flask import Flask, render_template, request, session, redirect
 from datetime import datetime, timedelta
 from threading import Thread
-import pyotp
+import pandas as pd
+import pyotp, requests
 import json
 import http.client
 import mimetypes
-import time
+import time, math
 
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
 conn = http.client.HTTPSConnection("apiconnect.angelbroking.com")
 
+js_tkn_dt = {}
 
 def five_min(header, date_str, time_str):
 
@@ -38,26 +40,80 @@ def five_min(header, date_str, time_str):
 
 
 def algo_five(candle_data):
-    if len(candle_data) < 5:
-        return False
+    if candle_data is not None:
+        if len(candle_data) < 5:
+            return False
 
-    last_candle = candle_data[-1]
-    second_last_candle = candle_data[-2]
-    third_last_candle = candle_data[-3]
-    fourth_last_candle = candle_data[-4]
-    fifth_last_candle = candle_data[-5]
-    mini = min(third_last_candle[4], second_last_candle[4], fourth_last_candle[4])
-    print(f" 1st {last_candle[1]} 2nd {second_last_candle[2]} 3rd {third_last_candle[3]}")
-    if (last_candle[4] < last_candle[1] and
-            second_last_candle[4] < second_last_candle[1] and
-            third_last_candle[4] < third_last_candle[1] and
-            fourth_last_candle[4] < fourth_last_candle[1] and
-            second_last_candle[2] > third_last_candle[1] and
-            last_candle[4] < mini):
-        return True
+        last_candle = candle_data[-1]
+        second_last_candle = candle_data[-2]
+        third_last_candle = candle_data[-3]
+        fourth_last_candle = candle_data[-4]
+        fifth_last_candle = candle_data[-5]
+        mini = min(third_last_candle[4], second_last_candle[4], fourth_last_candle[4])
+
+        if (last_candle[4] < last_candle[1] and
+                second_last_candle[4] < second_last_candle[1] and
+                third_last_candle[4] < third_last_candle[1] and
+                fourth_last_candle[4] < fourth_last_candle[1] and
+                second_last_candle[2] > third_last_candle[1] and
+                last_candle[4] < mini):
+            return True, "true"
+        else:
+            return False, last_candle
     else:
-        return False
+        return False, "Market is Not Open Yet"
 
+
+def filter_api_data(js_tkn_dt, exch_seg, instrumenttype, name, strike_price, pe_ce):
+    options_data = [item for item in js_tkn_dt if
+                        item['exch_seg'] == exch_seg and
+                        item['instrumenttype'] == instrumenttype and
+                        item['name'] == name and
+                        float(item['strike']) == strike_price and
+                        item['symbol'].endswith(pe_ce)]
+    
+    options_data = [
+        {**option, 'expiry_date': datetime.strptime(option['expiry'], '%d%b%Y')} 
+        for option in options_data
+    ]
+
+    tkn_dt = min(options_data, key=lambda x: x['expiry_date'])
+    return tkn_dt
+
+def order_check(headers):
+    global json_data
+    date_str = datetime.now()
+    time_str = datetime.strptime("15:30", "%H:%M")
+    candle_data = five_min(headers, date_str, time_str)
+    order_placed, candle_data = algo_five(candle_data)
+
+    if order_placed:
+        atmst = math.floor(candle_data[-2]/50) * 50
+        atmst = atmst * 100
+        print(atmst)
+        gt_tkn = filter_api_data(json_data, 'NFO', 'OPTIDX', 'NIFTY', 2170000, 'PE')
+        
+        payload = {
+            "variety":"NORMAL",
+            "tradingsymbol":gt_tkn['symbol'],
+            "symboltoken":gt_tkn['token'],
+            "transactiontype":"BUY",
+            "exchange":"NFO",
+            "ordertype":"MARKET",
+            "producttype":"INTRADAY",
+            "duration":"DAY",
+            "quantity":gt_tkn['lotsize']
+            }
+        payload_str = json.dumps(payload)
+        conn.request("POST","/rest/secure/angelbroking/order/v1/placeOrder",payload_str,headers)
+        res = conn.getresponse()
+        data = res.read()
+        print(data.decode("utf-8"))
+        conn.close()
+        return True, candle_data
+
+    else:
+        return False, candle_data
 
 
 @app.route('/')
@@ -113,20 +169,8 @@ def login():
             'api': api,
             'token': jwt_token
         }
-        print(session)
         return redirect('/profile')
     return render_template('index.html')
-
-
-def order_check(headers):
-    date_str = datetime.now() 
-    time_str = datetime.strptime("15:30", "%H:%M")
-    candle_data = five_min(headers, date_str, time_str)
-    order_placed = algo_five(candle_data)
-    if order_placed:
-        return True, candle_data
-    else:
-        return False, candle_data
 
 
 @app.route('/profile', methods=['POST', 'GET'])
@@ -141,7 +185,20 @@ def profile():
             holdings = five_min(user['headers'], date_str, time_str)
             order_placed = algo_five(holdings)
             if order_placed:
-                return redirect('/order')
+                atmst = math.floor(holdings[-1][-2]/50) * 50
+                order_placed = atmst
+                response = requests.get('https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json')
+                if response.status_code == 200:
+                    json_data = response.json()
+                exch_seg = 'NFO'
+                instrumenttype = 'OPTIDX'
+                symbol = 'NIFTY'
+                pe_ce = 'CE'
+                df = pd.DataFrame(json_data)
+                get_token = filter_api_data(json_data, 'NFO', 'OPTIDX', 'NIFTY', 2170000, 'PE')
+                print(df)
+                return render_template('profile.html', name=order_placed, holdings=get_token)
+                # return redirect('/order')
             else:
                 order_placed = "Do not place the order"
                 return render_template('profile.html', name=order_placed, holdings=holdings)
@@ -157,8 +214,11 @@ def profile():
 
 @app.route('/check')
 def check():
+    global json_data
     if 'user' in session:
-        user = session['user']
+        response = requests.get('https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json')
+        if response.status_code == 200:
+            json_data = response.json()
         return render_template('check.html')
     else:
         return render_template('index.html')
@@ -166,41 +226,20 @@ def check():
 
 @app.route('/status')
 def get_status():
+    global json_data
     if 'user' in session:
         user = session['user']
         result, candle_data = order_check(user['headers'])
         if result:
             return 'true'
         else:
-            return str(candle_data[-1][-2])
+            return str(candle_data)
     else:
         return str("Login Your Account")
 
 @app.route('/order')
 def order():
   if 'user' in session:
-    user = session['user']
-    userProfile = user
-    payload = {
-        "variety":"NORMAL",
-        "tradingsymbol":"SBIN-EQ",
-        "symboltoken":"3045",
-        "transactiontype":"BUY",
-        "exchange":"NSE",
-        "ordertype":"MARKET",
-        "producttype":"INTRADAY",
-        "duration":"DAY",
-        "price":"194.50",
-        "squareoff":"0",
-        "stoploss":"0",
-        "quantity":"1"
-        }
-    payload_str = json.dumps(payload)
-    conn.request("POST","/rest/secure/angelbroking/order/v1/placeOrder",payload_str,user['headers'])
-    res = conn.getresponse()
-    data = res.read()
-    print(data.decode("utf-8"))
-    conn.close()
     return 'seccuss'
   return "Please login first"
 

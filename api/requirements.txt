@@ -12,3 +12,4 @@ defer==1.0.4
 logzero==1.7.0
 pyotp==2.9.0
 requests==2.25.1
+pandas==2.1.4

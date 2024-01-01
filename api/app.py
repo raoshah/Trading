@@ -41,23 +41,22 @@ def five_min(header, date_str, time_str):
 
 def algo_five(candle_data):
     if candle_data is not None:
-        if len(candle_data) < 5:
+        if len(candle_data) < 4:
             return False
 
         last_candle = candle_data[-1]
         second_last_candle = candle_data[-2]
         third_last_candle = candle_data[-3]
         fourth_last_candle = candle_data[-4]
-        fifth_last_candle = candle_data[-5]
         mini = min(third_last_candle[4], second_last_candle[4], fourth_last_candle[4])
 
         if (last_candle[4] < last_candle[1] and
                 second_last_candle[4] < second_last_candle[1] and
                 third_last_candle[4] < third_last_candle[1] and
                 fourth_last_candle[4] < fourth_last_candle[1] and
-                second_last_candle[2] > third_last_candle[1] and
+                second_last_candle[1] < third_last_candle[2] and
                 last_candle[4] < mini):
-            return True, "true"
+            return True, last_candle
         else:
             return False, last_candle
     else:
@@ -82,8 +81,8 @@ def filter_api_data(js_tkn_dt, exch_seg, instrumenttype, name, strike_price, pe_
 
 def order_check(headers):
     global json_data
-    date_str = datetime.now()
-    time_str = datetime.strptime("15:30", "%H:%M")
+    date_str = datetime.now() 
+    time_str = datetime.strptime("15:15", "%H:%M")
     candle_data = five_min(headers, date_str, time_str)
     order_placed, candle_data = algo_five(candle_data)
 
@@ -233,7 +232,7 @@ def get_status():
         if result:
             return 'true'
         else:
-            return str(candle_data)
+            return str(candle_data[-2])
     else:
         return str("Login Your Account")
 

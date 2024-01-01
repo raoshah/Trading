@@ -1,6 +1,7 @@
 {% extends 'layout.html' %}
 
 {% block body %}
+<button style="text-align: right;"><a href="/logout">Logout</a></button>
 <h1>Auto Order place Checking... </h1>
 
 <h2>Try <span id="count"></span> </h2>
@@ -8,7 +9,6 @@
 <h2>Order Not place Yet </h2>
 <h2>
     <button onclick="checkStatus()">Refresh</button> 
-    <a href="/logout">Logout</a>
 </h2>
 
 
